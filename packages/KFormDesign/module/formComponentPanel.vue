@@ -3,13 +3,14 @@
  * @Author: kcz
  * @Date: 2019-12-31 19:39:48
  * @LastEditors: kcz
- * @LastEditTime: 2020-10-28 16:17:29
+ * @LastEditTime: 2021-05-28 00:27:22
  -->
 <template>
   <div class="form-panel">
     <p class="hint-text" v-show="data.list.length === 0">
-      从左侧选择控件添加
+      <a-empty description="从左侧选择控件添加" />
     </p>
+
     <a-form
       class="a-form-box k-form-build"
       :form="form"
@@ -60,6 +61,9 @@
       <ul>
         <li @click="handleDownMerge"><a-icon type="caret-down" />向下合并</li>
         <li @click="handleRightMerge"><a-icon type="caret-right" />向右合并</li>
+        <li @click="handleRightSplit">
+          <a-icon type="border-inner" />拆分单元格
+        </li>
         <li @click="handleAddCol">
           <a-icon type="border-horizontal" />增加一列
         </li>
@@ -221,7 +225,7 @@ export default {
             this.handleColAdd(evt, array, true);
             return;
           }
-          if (element.type === "grid" || element.type === "tabs") {
+          if (["grid", "tabs", "selectInputList"].includes(element.type)) {
             // 栅格布局
             element.columns.forEach(item => {
               traverse(item.list);
@@ -251,10 +255,9 @@ export default {
     },
     handleDelete() {
       // 删除已选择
-      console.log(234);
       const traverse = array => {
         array = array.filter((element, index) => {
-          if (element.type === "grid" || element.type === "tabs") {
+          if (["grid", "tabs", "selectInputList"].includes(element.type)) {
             // 栅格布局
             element.columns.forEach(item => {
               item.list = traverse(item.list);
@@ -292,6 +295,8 @@ export default {
     },
     handleDownMerge() {
       // 向下合并
+
+      // 判断当前行是否是最后一行，最后一行无法向下合并
       if (
         this.rightMenuSelectValue.trs.length -
           this.rightMenuSelectValue.trs[this.trIndex].tds[this.tdIndex]
@@ -302,50 +307,52 @@ export default {
         return false;
       }
 
-      // 计算rowspan超过自身的td
-      let rows = 0;
-      this.rightMenuSelectValue.trs[this.trIndex].tds.forEach(
-        (element, index) => {
-          if (index >= this.tdIndex) {
-            return false;
-          }
-          if (
-            element.rowspan >
-            this.rightMenuSelectValue.trs[this.trIndex].tds[this.tdIndex]
-              .rowspan
-          ) {
-            rows += 1;
-          }
-        }
-      );
+      // 获取当前单元格的rowspan
+      const currentRowspan = this.rightMenuSelectValue.trs[this.trIndex].tds[
+        this.tdIndex
+      ].rowspan;
+
+      // 判断下一列单元格与当前单元格的colspan是否一致，如果不一致则无法合并
       if (
         this.rightMenuSelectValue.trs[this.trIndex].tds[this.tdIndex]
           .colspan !==
-        this.rightMenuSelectValue.trs[this.trIndex + 1].tds[this.tdIndex - rows]
-          .colspan
+        this.rightMenuSelectValue.trs[this.trIndex + currentRowspan].tds[
+          this.tdIndex
+        ].colspan
       ) {
         this.$message.error("当前表格无法向下合并");
         return false;
       }
 
-      this.rightMenuSelectValue.trs[this.trIndex].tds[
-        this.tdIndex
-      ].rowspan += 1;
-      this.rightMenuSelectValue.trs[
-        this.trIndex + 1
-      ].tds = this.rightMenuSelectValue.trs[this.trIndex + 1].tds.filter(
-        (item, index) => index !== this.tdIndex - rows
-      );
+      // 获取下一列单元格的rowspan
+      const nextRowSpan = this.rightMenuSelectValue.trs[
+        this.trIndex + currentRowspan
+      ].tds[this.tdIndex].rowspan;
 
-      // }
+      // 当前单元格rowspan等于当前单元格rowspan加上下一列单元格rowspan
+      this.rightMenuSelectValue.trs[this.trIndex].tds[this.tdIndex].rowspan =
+        currentRowspan + nextRowSpan;
+
+      // 将被合并的单元rowspan修改为0
+      this.rightMenuSelectValue.trs[this.trIndex + currentRowspan].tds[
+        this.tdIndex
+      ].rowspan = 0;
+
+      // 清空被合并单元格list
+      this.rightMenuSelectValue.trs[this.trIndex + currentRowspan].tds[
+        this.tdIndex
+      ].list = [];
     },
     handleRightMerge() {
       // 向右合并
+      // 获取当前列的所有colspan总和
       const sumCols = this.rightMenuSelectValue.trs[this.trIndex].tds
         .map(item => item.colspan)
         .reduce(function(partial, value) {
           return partial + value;
         });
+
+      // 判断是否是最后一列，最后一列无法继续向右合并
       if (
         sumCols -
           this.rightMenuSelectValue.trs[this.trIndex].tds[this.tdIndex]
@@ -355,33 +362,73 @@ export default {
         this.$message.error("当前是最后一列，无法向右合并");
         return false;
       }
+
+      // 获取当前单元格的colspan
+      const currentColspan = this.rightMenuSelectValue.trs[this.trIndex].tds[
+        this.tdIndex
+      ].colspan;
+
+      // 判断需要合并的单元格rowspan是否与当前单元格一致
       if (
         this.rightMenuSelectValue.trs[this.trIndex].tds[this.tdIndex]
           .rowspan !==
-        this.rightMenuSelectValue.trs[this.trIndex].tds[this.tdIndex + 1]
-          .rowspan
+        this.rightMenuSelectValue.trs[this.trIndex].tds[
+          this.tdIndex + currentColspan
+        ].rowspan
       ) {
         this.$message.error("当前表格无法向右合并");
         return false;
       }
 
+      // 合并单元格colspan
       this.rightMenuSelectValue.trs[this.trIndex].tds[
         this.tdIndex
       ].colspan += this.rightMenuSelectValue.trs[this.trIndex].tds[
-        this.tdIndex + 1
+        this.tdIndex + currentColspan
       ].colspan;
 
-      this.rightMenuSelectValue.trs[
+      // 将被合并的单元格colspan设置为0
+      this.rightMenuSelectValue.trs[this.trIndex].tds[
+        this.tdIndex + currentColspan
+      ].colspan = 0;
+
+      // 情况被合并单元格的list
+      this.rightMenuSelectValue.trs[this.trIndex].tds[
+        this.tdIndex + currentColspan
+      ].list = [];
+    },
+    // 拆分单元格
+    handleRightSplit() {
+      // 获取当前单元格的colspan及rowspan
+      const { colspan, rowspan } = this.rightMenuSelectValue.trs[
         this.trIndex
-      ].tds = this.rightMenuSelectValue.trs[this.trIndex].tds.filter(
-        (item, index) => {
-          return index !== this.tdIndex + 1;
+      ].tds[this.tdIndex];
+
+      for (
+        let rowIndex = this.trIndex, rowLen = this.trIndex + rowspan;
+        rowIndex < rowLen;
+        rowIndex++
+      ) {
+        for (
+          let colIndex = this.tdIndex, colLen = this.tdIndex + colspan;
+          colIndex < colLen;
+          colIndex++
+        ) {
+          if (rowIndex === this.trIndex && colIndex === this.tdIndex) continue;
+          this.rightMenuSelectValue.trs[rowIndex].tds.splice(colIndex, 1, {
+            colspan: 1,
+            rowspan: 1,
+            list: []
+          });
         }
-      );
-      // }
+      }
+      // 修改当前单元格colspan、rowspan为1
+      this.rightMenuSelectValue.trs[this.trIndex].tds[this.tdIndex].colspan = 1;
+      this.rightMenuSelectValue.trs[this.trIndex].tds[this.tdIndex].rowspan = 1;
     },
     handleAddCol() {
       // 增加列
+
       this.rightMenuSelectValue.trs.forEach(item => {
         item.tds.splice(this.tdIndex + 1, 0, {
           colspan: 1,
@@ -406,7 +453,21 @@ export default {
           list: []
         });
       }
-      this.rightMenuSelectValue.trs.splice(this.trIndex + 1, 0, rowJson);
+
+      // 取当前rowspan最大值
+      let maxRowSpan = 1;
+      this.rightMenuSelectValue.trs[this.trIndex].tds.forEach(item => {
+        if (maxRowSpan < item.rowspan) {
+          maxRowSpan = item.rowspan;
+        }
+      });
+
+      // 在rowspan最大值处插入数据
+      this.rightMenuSelectValue.trs.splice(
+        this.trIndex + maxRowSpan,
+        0,
+        rowJson
+      );
     },
     handleShowRightMenu(e, val, trIndex, tdIndex) {
       // 显示右键菜单

@@ -50,8 +50,10 @@
 
     a {
       color      : #666;
-      margin-left: 10px;
-
+      margin: 0 5px;
+      &.disabled, &.disabled:hover {
+      color      : #ccc;
+      }
       &:hover {
         color: @primary-color;
       }
@@ -173,42 +175,24 @@
         overflow      : hidden;
         position      : relative;
 
+
         // 控件属性设置
         .form-item-properties {
-          position     : absolute;
-          width        : 100%;
-          height       : 100%;
-          z-index      : 12;
-          left         : 100%;
-          top          : 0;
-          // box-shadow: 0 0px 3px 3px #aaa;
-          transition   : all .5s;
+          width : 100%;
+          height: 100%;
+        }
 
-          &.show-properties {
-            left: 0px;
+        .ant-tabs {
+          height: 100%;
 
-            .close-box {
-              right  : @left-right-width - 1px;
-              opacity: .7;
+          .ant-tabs-content {
+            height: 100%;
+
+            .ant-tabs-tabpane {
+
+              height  : calc(100% - 45px);
+              overflow: auto;
             }
-          }
-
-          // 关闭控件属性面板按钮
-          .close-box {
-            opacity         : 0;
-            transition      : all .5s;
-            position        : fixed;
-            background      : @primary-color;
-            // background   : fade(@primary-color,70%);
-            padding         : 8px 10px;
-            cursor          : pointer;
-            user-select     : none;
-            border-radius   : 5px 0 0 5px;
-            font-size       : 16px;
-            color           : #fff;
-            bottom          : 10px;
-            right           : 0px;
-
           }
         }
 
@@ -217,18 +201,9 @@
           overflow  : hidden;
           background: #fff;
 
-          .head-title {
-            height       : 48px;
-            line-height  : 48px;
-            padding      : 0 24px;
-            font-size    : 16px;
-            border-bottom: 1px solid @border-color;
-            color        : rgba(0, 0, 0, 0.85);
-          }
-
           .properties-body {
             overflow: auto;
-            height  : calc(100% - 48px);
+            height  : 100%;
             padding : 8px 16px;
           }
 
@@ -245,11 +220,7 @@
         }
 
         .hint-box {
-          color      : #aaa;
-          height     : 75vh;
-          line-height: 75vh;
-          text-align : center;
-          font-size  : 20px;
+          margin-top: 120px;
         }
       }
     }
@@ -279,9 +250,9 @@
         >.hint-text {
           position  : absolute;
           left      : 0;
-          top       : 45%;
+          top       : 50%;
           width     : 100%;
-          text-align: center;
+          transform: translateY(-50%);
           font-size : 20px;
           color     : #aaa;
           z-index   : 16;
@@ -426,12 +397,15 @@
             }
 
             // 动态表格设计面板样式
-            .batch-box {
+            .batch-box,
+            .select-input-list-box {
               >.batch-label {
                 font-size  : 16px;
                 font-weight: 500;
                 padding    : 10px 10px;
+
               }
+
 
               .draggable-box {
                 min-height: 60px;
@@ -472,9 +446,33 @@
                   }
                 }
               }
+
+            }
+
+            .select-input-list-box {
+              .column-box {
+                display: flex;
+                width  : 100%;
+
+                .check-box {
+                  width: 80px;
+                }
+
+                .draggable-box {
+                  flex: 1;
+                }
+              }
+
+              // 隐藏选择输入列的所有组件的label
+              .draggable-box {
+                .ant-form-item-label {
+                  display: none !important;
+                }
+              }
             }
 
             .batch-box,
+            .select-input-list-box,
             .grid-box,
             .table-box {
               position  : relative;
@@ -581,14 +579,15 @@
 
   // 表格右键菜单样式
   .right-menu {
-    width     : 190px;
+    width     : 160px;
     background: #fff;
     border    : 1px solid #ccc;
     position  : fixed;
     transition: all 0s;
-    box-shadow: 3px 3px 5px #999;
+    box-shadow: 3px 3px 8px #999;
+    border-radius: 3px;
     padding   : 8px 0;
-    z-index   : 999;
+    z-index   : 2199;
 
     ul {
       padding   : 0;
@@ -602,7 +601,9 @@
         height     : 30px;
         line-height: 30px;
         font-size  : 14px;
-
+        i{
+          margin-right: 4px;
+        }
         &:hover {
           background: #eee;
         }
@@ -730,8 +731,33 @@
 
 // k-form-build
 .k-form-build-9136076486841527 {
+
+  .select-input-list-box {
+    color    : rgba(0, 0, 0, 0.65);
+    font-size: 14px;
+
+    .ant-form-item {
+      margin-bottom: 2px;
+      margin-right : 8px
+    }
+
+    &.ant-form-horizontal {
+      .ant-col.ant-form-item-control-wrapper {
+        height     : 30px;
+        display    : flex;
+        align-items: center;
+      }
+
+      .text-box {
+        height     : 30px;
+        line-height: 30px;
+      }
+    }
+
+  }
+
   .ant-form-item {
-    margin-bottom: 18px;
+    margin-bottom: 16px;
   }
 
   // 防止报错信息占位
@@ -786,6 +812,20 @@
     }
   }
 
+}
+
+//颜色选择器覆盖
+.m-colorPicker {
+  width:25%;
+  vertical-align:bottom;
+  padding: 5px;
+  border: 1px solid #e6e6e6;
+  border-radius: 4px;
+  font-size: 0;
+  .colorBtn {
+    height: 22px !important;
+    width: 100% !important;
+  }
 }
 
 // .k-form-build-9136076486841527 {

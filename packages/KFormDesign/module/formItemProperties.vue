@@ -1,10 +1,12 @@
 <template>
   <div class="properties-centent kk-checkbox">
-    <div class="head-title">
-      控件属性设置
-    </div>
     <div class="properties-body">
-      <p class="hint-box" v-show="selectItem.key === ''">未选择控件</p>
+      <a-empty
+        class="hint-box"
+        v-show="selectItem.key === ''"
+        description="未选择控件"
+      />
+
       <a-form v-show="selectItem.key !== ''">
         <a-form-item
           v-if="typeof selectItem.label !== 'undefined'"
@@ -45,12 +47,12 @@
           label="自适应内容高度"
         >
           <a-input-number
-            style="width:100%"
+            style="width: 100%"
             v-model="options.minRows"
             placeholder="最小高度"
           />
           <a-input-number
-            style="width:100%"
+            style="width: 100%"
             v-model="options.maxRows"
             placeholder="最大高度"
           />
@@ -119,7 +121,10 @@
         </a-form-item>
         <!-- 选项配置及动态数据配置 end -->
         <!-- tabs配置 start -->
-        <a-form-item v-if="selectItem.type === 'tabs'" label="页签配置">
+        <a-form-item
+          v-if="['tabs', 'selectInputList'].includes(selectItem.type)"
+          :label="selectItem.type === 'tabs' ? '页签配置' : '列选项配置'"
+        >
           <KChangeOption v-model="selectItem.columns" type="tab" />
         </a-form-item>
         <!-- tabs配置 end -->
@@ -382,6 +387,20 @@
             <a-radio-button value="right">右</a-radio-button>
           </a-radio-group>
         </a-form-item>
+        <!-- 文字字体 -->
+        <a-form-item v-if="selectItem.type === 'text'" label="字体属性设置">
+          <colorPicker v-model="options.color" />
+          <a-select
+            :options="familyOptions"
+            v-model="options.fontFamily"
+            style="width:36%;margin-left:2%;vertical-align:bottom;"
+          />
+          <a-select
+            :options="sizeOptions"
+            v-model="options.fontSize"
+            style="width:35%;margin-left:2%;vertical-align:bottom;"
+          />
+        </a-form-item>
         <a-form-item v-if="selectItem.type === 'text'" label="操作属性">
           <kCheckbox v-model="options.showRequiredMark" label="显示必选标记" />
         </a-form-item>
@@ -509,9 +528,7 @@
         </a-form-item>
 
         <a-form-item v-if="selectItem.type === 'table'" label="提示">
-          <p style="line-height: 26px;">
-            请点击右键增加行列，或者合并单元格
-          </p>
+          <p style="line-height: 26px">请点击右键增加行列，或者合并单元格</p>
         </a-form-item>
 
         <a-form-item
@@ -522,18 +539,21 @@
         </a-form-item>
 
         <!-- 前缀 -->
-        <a-form-item v-if="['input'].includes(selectItem.type)" label="前缀">
-          <a-input v-model="options.prefix" placeholder="请输入" />
+        <a-form-item
+          label="前缀"
+          v-if="typeof options.addonBefore !== 'undefined'"
+        >
+          <a-input v-model="options.addonBefore" placeholder="请输入" />
         </a-form-item>
 
         <!-- 后缀 -->
-        <a-form-item v-if="['input'].includes(selectItem.type)" label="后缀">
-          <a-input v-model="options.suffix" placeholder="请输入" />
+        <a-form-item
+          label="后缀"
+          v-if="typeof options.addonAfter !== 'undefined'"
+        >
+          <a-input v-model="options.addonAfter" placeholder="请输入" />
         </a-form-item>
       </a-form>
-    </div>
-    <div class="close-box" @click="$emit('handleHide')">
-      <a-icon type="double-right" />
     </div>
   </div>
 </template>
@@ -549,12 +569,81 @@ export default {
   name: "formItemProperties",
   data() {
     return {
-      options: {}
+      familyOptions: [
+        // 字体选择设置
+        {
+          value: "SimSun",
+          label: "宋体"
+        },
+        {
+          value: "FangSong",
+          label: "仿宋"
+        },
+        {
+          value: "SimHei",
+          label: "黑体"
+        },
+        {
+          value: "PingFangSC-Regular",
+          label: "苹方"
+        },
+        {
+          value: "KaiTi",
+          label: "楷体"
+        },
+        {
+          value: "LiSu",
+          label: "隶书"
+        }
+      ],
+      sizeOptions: [
+        //字号选择设置
+        {
+          value: "26pt",
+          label: "一号"
+        },
+        {
+          value: "24pt",
+          label: "小一"
+        },
+        {
+          value: "22pt",
+          label: "二号"
+        },
+        {
+          value: "18pt",
+          label: "小二"
+        },
+        {
+          value: "16pt",
+          label: "三号"
+        },
+        {
+          value: "15pt",
+          label: "小三"
+        },
+        {
+          value: "14pt",
+          label: "四号"
+        },
+        {
+          value: "12pt",
+          label: "小四"
+        },
+        {
+          value: "10.5pt",
+          label: "五号"
+        },
+        {
+          value: "9pt",
+          label: "小五"
+        }
+      ]
     };
   },
-  watch: {
-    selectItem(val) {
-      this.options = val.options || {};
+  computed: {
+    options() {
+      return this.selectItem.options || {};
     }
   },
   props: {

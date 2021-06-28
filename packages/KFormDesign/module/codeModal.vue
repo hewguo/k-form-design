@@ -1,9 +1,9 @@
 <!--
- * @Description: 
+ * @Description: 代码预览组件
  * @Author: kcz
  * @Date: 2019-12-30 00:37:05
  * @LastEditors: kcz
- * @LastEditTime: 2020-03-22 20:56:48
+ * @LastEditTime: 2021-05-27 15:18:39
  -->
 <template>
   <a-modal
@@ -31,7 +31,7 @@
   </a-modal>
 </template>
 <script>
-let codeVueFront = `<template>
+const codeVueFront = `<template>
   <div>
     <k-form-build
       :value="jsonData"

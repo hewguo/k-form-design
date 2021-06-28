@@ -14,6 +14,10 @@
         @handleOpenJsonModal="handleOpenJsonModal"
         @handleReset="handleReset"
         @handleClose="handleClose"
+        @handleUndo="handleUndo"
+        @handleRedo="handleRedo"
+        :recordList="recordList"
+        :redoList="redoList"
       >
         <template slot="left-action">
           <slot name="left-action"></slot>
@@ -99,6 +103,10 @@
             @handleOpenJsonModal="handleOpenJsonModal"
             @handleReset="handleReset"
             @handleClose="handleClose"
+            @handleUndo="handleUndo"
+            @handleRedo="handleRedo"
+            :recordList="recordList"
+            :redoList="redoList"
           >
             <template slot="left-action">
               <slot name="left-action"></slot>
@@ -129,17 +137,25 @@
 
         <!-- 右侧控件属性区域 start -->
         <aside class="right">
-          <formProperties
-            :config="data.config"
-            :previewOptions="previewOptions"
-          />
-          <formItemProperties
-            :class="{ 'show-properties': showPropertie }"
-            class="form-item-properties"
-            :selectItem="selectItem"
-            :hideModel="hideModel"
-            @handleHide="showPropertie = false"
-          />
+          <a-tabs
+            :activeKey="activeKey"
+            @change="changeTab"
+            :tabBarStyle="{ margin: 0 }"
+          >
+            <a-tab-pane :key="1" tab="表单属性设置">
+              <formProperties
+                :config="data.config"
+                :previewOptions="previewOptions"
+              />
+            </a-tab-pane>
+            <a-tab-pane :key="2" tab="控件属性设置">
+              <formItemProperties
+                class="form-item-properties"
+                :selectItem="selectItem"
+                :hideModel="hideModel"
+              />
+            </a-tab-pane>
+          </a-tabs>
         </aside>
         <!-- 右侧控件属性区域 end -->
       </div>
@@ -163,11 +179,11 @@ import kCodeModal from "./module/codeModal";
 import collapseItem from "./module/collapseItem";
 import importJsonModal from "./module/importJsonModal";
 import previewModal from "../KFormPreview/index.vue";
-// import draggable from "vuedraggable";
 import zhCN from "ant-design-vue/lib/locale-provider/zh_CN";
+
+import { Revoke } from "../core/revoke";
 import {
   basicsList,
-  // highList,
   layoutList,
   customComponents
 } from "./config/formItemsConfig";
@@ -201,7 +217,9 @@ export default {
         "exportJson",
         "exportCode",
         "reset",
-        "close"
+        "close",
+        "undo",
+        "redo"
       ]
     },
     showToolbarsText: {
@@ -226,6 +244,7 @@ export default {
         "cascader",
         "treeSelect",
         "batch",
+        "selectInputList",
         "editor",
         "switch",
         "button",
@@ -249,15 +268,19 @@ export default {
     return {
       locale: zhCN,
       customComponents,
+      activeKey: 1,
       updateTime: 0,
       updateRecordTime: 0,
-      showPropertie: false,
       startType: "",
+      revoke: null,
+      recordList: [],
+      redoList: [],
       noModel: [
         "button",
         "divider",
         "card",
         "grid",
+        "tabs",
         "table",
         "alert",
         "text",
@@ -268,6 +291,8 @@ export default {
         config: {
           layout: "horizontal",
           labelCol: { xs: 4, sm: 4, md: 4, lg: 4, xl: 4, xxl: 4 },
+          labelWidth: 100,
+          labelLayout: "flex",
           wrapperCol: { xs: 18, sm: 18, md: 18, lg: 18, xl: 18, xxl: 18 },
           hideRequiredMark: false,
           customStyle: ""
@@ -293,7 +318,17 @@ export default {
     kFormComponentPanel,
     formItemProperties,
     formProperties
-    // draggable
+  },
+  watch: {
+    data: {
+      handler(e) {
+        this.$nextTick(() => {
+          this.revoke.push(e);
+        });
+      },
+      deep: true,
+      immediate: true
+    }
   },
   computed: {
     basicsArray() {
@@ -306,7 +341,7 @@ export default {
     },
     collapseDefaultActiveKey() {
       // 计算当前展开的控件列表
-      let defaultActiveKey = window.localStorage.getItem(
+      const defaultActiveKey = window.localStorage.getItem(
         "collapseDefaultActiveKey"
       );
       if (defaultActiveKey) {
@@ -403,6 +438,8 @@ export default {
         config: {
           layout: "horizontal",
           labelCol: { xs: 4, sm: 4, md: 4, lg: 4, xl: 4, xxl: 4 },
+          labelWidth: 100,
+          labelLayout: "flex",
           wrapperCol: { xs: 18, sm: 18, md: 18, lg: 18, xl: 18, xxl: 18 },
           hideRequiredMark: false,
           customStyle: ""
@@ -413,7 +450,7 @@ export default {
     },
     handleSetSelectItem(record) {
       // 操作间隔不能低于100毫秒
-      let newTime = new Date().getTime();
+      const newTime = new Date().getTime();
       if (newTime - this.updateTime < 100) {
         return false;
       }
@@ -426,10 +463,57 @@ export default {
       // 判断是否选中控件，如果选中则弹出属性面板，否则关闭属性面板
       if (record.key) {
         this.startType = record.type;
-        this.showPropertie = true;
+        this.changeTab(2);
       } else {
-        this.showPropertie = false;
+        this.changeTab(1);
       }
+    },
+    /**
+     * @description: 切换属性设置面板
+     * @param {*}
+     * @return {*}
+     */
+
+    changeTab(e) {
+      this.activeKey = e;
+    },
+    /**
+     * @Author: kcz
+     * @description: 遍历json结构，获取所有字段
+     * @param {*}
+     * @return {*} Array
+     */
+    getFieldSchema() {
+      const fields = [];
+      const traverse = array => {
+        array.forEach(element => {
+          if (element.type === "grid" || element.type === "tabs") {
+            // 栅格布局
+            element.columns.forEach(item => {
+              traverse(item.list);
+            });
+          } else if (element.type === "card") {
+            // 卡片布局
+            traverse(element.list);
+          } else if (element.type === "batch") {
+            // 动态表格内复制
+            traverse(element.list);
+          } else if (element.type === "table") {
+            // 表格布局
+            element.trs.forEach(item => {
+              item.tds.forEach(val => {
+                traverse(val.list);
+              });
+            });
+          } else {
+            if (element.model) {
+              fields.push(element);
+            }
+          }
+        });
+      };
+      traverse(this.data.list);
+      return fields;
     },
     handleSetData(data) {
       // 用于父组件赋值
@@ -454,6 +538,35 @@ export default {
     handleStart(type) {
       this.startType = type;
     },
+
+    /**
+     * @description: 撤销
+     * @param {*}
+     * @return {*}
+     */
+    handleUndo() {
+      const record = this.revoke.undo();
+      if (!record) {
+        return false;
+      }
+      this.data = record;
+
+      this.handleSetSelectItem({ key: "" });
+    },
+
+    /**
+     * @description: 重做
+     * @param {*}
+     * @return {*}
+     */
+    handleRedo() {
+      const record = this.revoke.redo();
+      if (!record) {
+        return false;
+      }
+      this.data = record;
+    },
+
     handleSave() {
       // 保存函数
       this.$emit("save", JSON.stringify(this.data));
@@ -465,6 +578,11 @@ export default {
     handleClose() {
       this.$emit("close");
     }
+  },
+  created() {
+    this.revoke = new Revoke();
+    this.recordList = this.revoke.recordList;
+    this.redoList = this.revoke.redoList;
   }
 };
 </script>

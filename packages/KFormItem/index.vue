@@ -3,33 +3,47 @@
  * @Author: kcz
  * @Date: 2020-01-02 22:41:48
  * @LastEditors: kcz
- * @LastEditTime: 2021-03-02 21:31:28
+ * @LastEditTime: 2021-05-28 00:59:02
  -->
 <template>
   <a-form-item
     v-if="
-      !(record.options.hidden === true) &&
-        [
-          'input',
-          'textarea',
-          'date',
-          'time',
-          'number',
-          'radio',
-          'checkbox',
-          'select',
-          'rate',
-          'switch',
-          'slider',
-          'uploadImg',
-          'uploadFile',
-          'cascader',
-          'treeSelect'
-        ].includes(record.type)
+      [
+        'input',
+        'textarea',
+        'date',
+        'time',
+        'number',
+        'radio',
+        'checkbox',
+        'select',
+        'rate',
+        'switch',
+        'slider',
+        'uploadImg',
+        'uploadFile',
+        'cascader',
+        'treeSelect'
+      ].includes(record.type)
     "
-    :label-col="formConfig.layout === 'horizontal' ? formConfig.labelCol : {}"
+    :label-col="
+      formConfig.layout === 'horizontal'
+        ? formConfig.labelLayout === 'flex'
+          ? { style: `width:${formConfig.labelWidth}px` }
+          : formConfig.labelCol
+        : {}
+    "
     :wrapper-col="
-      formConfig.layout === 'horizontal' ? formConfig.wrapperCol : {}
+      formConfig.layout === 'horizontal'
+        ? formConfig.labelLayout === 'flex'
+          ? { style: 'width:auto;flex:1' }
+          : formConfig.wrapperCol
+        : {}
+    "
+    :style="
+      formConfig.layout === 'horizontal' && formConfig.labelLayout === 'flex'
+        ? { display: 'flex' }
+        : {}
     "
   >
     <span slot="label">
@@ -43,30 +57,10 @@
         />
       </a-tooltip>
     </span>
-    <!-- 单行文本 -->
-    <a-input
-      :style="`width:${record.options.width}`"
-      v-if="record.type === 'input'"
-      :disabled="disabled || record.options.disabled"
-      :placeholder="record.options.placeholder"
-      :type="record.options.type"
-      :allowClear="record.options.clearable"
-      :maxLength="record.options.maxLength"
-      :addonBefore="record.options.prefix"
-      :addonAfter="record.options.suffix"
-      @change="handleChange($event.target.value, record.model)"
-      v-decorator="[
-        record.model, // input 的 name
-        {
-          initialValue: record.options.defaultValue, // 默认值
-          rules: record.rules // 验证规则
-        }
-      ]"
-    />
     <!-- 多行文本 -->
     <a-textarea
       :style="`width:${record.options.width}`"
-      v-else-if="record.type === 'textarea'"
+      v-if="record.type === 'textarea'"
       :autoSize="{
         minRows: record.options.minRows,
         maxRows: record.options.maxRows
@@ -82,69 +76,6 @@
         {
           initialValue: record.options.defaultValue, // 默认值
           rules: record.rules // 验证规则
-        }
-      ]"
-    />
-
-    <!-- 日期选择 -->
-    <KDatePicker
-      v-else-if="record.type === 'date'"
-      :record="record"
-      :parentDisabled="disabled"
-      @change="handleChange($event, record.model)"
-      v-decorator="[
-        record.model, // input 的 name
-        {
-          initialValue: record.options.range
-            ? record.options.rangeDefaultValue
-            : record.options.defaultValue, // 默认值
-          rules: record.rules // 验证规则
-        }
-      ]"
-    />
-    <!-- 时间选择 -->
-    <KTimePicker
-      v-else-if="record.type === 'time'"
-      :record="record"
-      :parentDisabled="disabled"
-      @change="handleChange($event, record.model)"
-      v-decorator="[
-        record.model, // input 的 name
-        {
-          initialValue: record.options.defaultValue, // 默认值
-          rules: record.rules // 验证规则
-        }
-      ]"
-    />
-    <!-- 数字输入框 -->
-    <a-input-number
-      v-else-if="record.type === 'number'"
-      :style="`width:${record.options.width}`"
-      :min="
-        record.options.min || record.options.min === 0
-          ? record.options.min
-          : -Infinity
-      "
-      :max="
-        record.options.max || record.options.max === 0
-          ? record.options.max
-          : Infinity
-      "
-      :disabled="disabled || record.options.disabled"
-      :step="record.options.step"
-      :precision="
-        record.options.precision > 50 ||
-        (!record.options.precision && record.options.precision !== 0)
-          ? null
-          : record.options.precision
-      "
-      :placeholder="record.options.placeholder"
-      @change="handleChange($event, record.model)"
-      v-decorator="[
-        record.model,
-        {
-          initialValue: record.options.defaultValue,
-          rules: record.rules
         }
       ]"
     />
@@ -181,58 +112,6 @@
       "
       :disabled="disabled || record.options.disabled"
       :placeholder="record.options.placeholder"
-      @change="handleChange($event, record.model)"
-      v-decorator="[
-        record.model,
-        {
-          initialValue: record.options.defaultValue,
-          rules: record.rules
-        }
-      ]"
-    />
-    <!-- 评分 -->
-    <a-rate
-      v-else-if="record.type === 'rate'"
-      :count="record.options.max"
-      :disabled="disabled || record.options.disabled"
-      :placeholder="record.options.placeholder"
-      :allowHalf="record.options.allowHalf"
-      @change="handleChange($event, record.model)"
-      v-decorator="[
-        record.model,
-        {
-          initialValue: record.options.defaultValue,
-          rules: record.rules
-        }
-      ]"
-    />
-    <!-- 下拉选框 -->
-    <a-select
-      :style="`width:${record.options.width}`"
-      v-else-if="record.type === 'select'"
-      :placeholder="record.options.placeholder"
-      :showSearch="record.options.showSearch"
-      :options="
-        !record.options.dynamic
-          ? record.options.options
-          : dynamicData[record.options.dynamicKey]
-          ? dynamicData[record.options.dynamicKey]
-          : []
-      "
-      :filterOption="
-        record.options.showSearch
-          ? (inputValue, option) => {
-              return (
-                option.componentOptions.children[0].text
-                  .toLowerCase()
-                  .indexOf(inputValue.toLowerCase()) >= 0
-              );
-            }
-          : false
-      "
-      :disabled="disabled || record.options.disabled"
-      :allowClear="record.options.clearable"
-      :mode="record.options.multiple ? 'multiple' : ''"
       @change="handleChange($event, record.model)"
       v-decorator="[
         record.model,
@@ -280,7 +159,7 @@
       </div>
       <div class="number" v-if="record.options.showInput">
         <a-input-number
-          style="width:100%"
+          style="width: 100%"
           :disabled="disabled || record.options.disabled"
           :min="record.options.min"
           :max="record.options.max"
@@ -308,47 +187,43 @@
         />
       </div>
     </div>
-    <!-- 上传图片 -->
-    <UploadImg
-      v-else-if="record.type === 'uploadImg'"
+    <component
+      v-else
       :style="`width:${record.options.width}`"
-      :parentDisabled="disabled"
+      v-bind="componentOption"
+      :min="
+        record.options.min || record.options.min === 0
+          ? record.options.min
+          : -Infinity
+      "
+      :max="
+        record.options.max || record.options.max === 0
+          ? record.options.max
+          : Infinity
+      "
+      :precision="
+        record.options.precision > 50 ||
+        (!record.options.precision && record.options.precision !== 0)
+          ? null
+          : record.options.precision
+      "
+      :parentDisabled="disabled || record.options.disabled"
+      :disabled="disabled || record.options.disabled"
       :record="record"
       :config="config"
-      @change="handleChange($event, record.model)"
-      v-decorator="[
-        record.model,
-        {
-          initialValue: record.options.defaultValue,
-          rules: record.rules
-        }
-      ]"
-    />
-    <!-- 上传文件 -->
-    <UploadFile
-      v-else-if="record.type === 'uploadFile'"
-      :style="`width:${record.options.width}`"
-      :record="record"
-      :config="config"
+      :filterOption="
+        record.options.showSearch
+          ? (inputValue, option) => {
+              return (
+                option.componentOptions.children[0].text
+                  .toLowerCase()
+                  .indexOf(inputValue.toLowerCase()) >= 0
+              );
+            }
+          : false
+      "
+      :allowClear="record.options.clearable"
       :dynamicData="dynamicData"
-      :parentDisabled="disabled"
-      @change="handleChange($event, record.model)"
-      v-decorator="[
-        record.model,
-        {
-          initialValue: record.options.defaultValue,
-          rules: record.rules
-        }
-      ]"
-    />
-    <!-- 树选择器 -->
-    <a-tree-select
-      v-else-if="record.type === 'treeSelect'"
-      :style="`width:${record.options.width}`"
-      :placeholder="record.options.placeholder"
-      :multiple="record.options.multiple"
-      :showSearch="record.options.showSearch"
-      :treeCheckable="record.options.treeCheckable"
       :treeData="
         !record.options.dynamic
           ? record.options.options
@@ -356,23 +231,6 @@
           ? dynamicData[record.options.dynamicKey]
           : []
       "
-      :disabled="disabled || record.options.disabled"
-      :allowClear="record.options.clearable"
-      @change="handleChange($event, record.model)"
-      v-decorator="[
-        record.model,
-        {
-          initialValue: record.options.defaultValue,
-          rules: record.rules
-        }
-      ]"
-    />
-    <!-- 级联选择器 -->
-    <a-cascader
-      v-else-if="record.type === 'cascader'"
-      :style="`width:${record.options.width}`"
-      :placeholder="record.options.placeholder"
-      :showSearch="record.options.showSearch"
       :options="
         !record.options.dynamic
           ? record.options.options
@@ -380,76 +238,66 @@
           ? dynamicData[record.options.dynamicKey]
           : []
       "
-      :disabled="disabled || record.options.disabled"
-      :allowClear="record.options.clearable"
+      :mode="record.options.multiple ? 'multiple' : ''"
       @change="handleChange($event, record.model)"
       v-decorator="[
-        record.model,
+        record.model, // input 的 name
         {
-          initialValue: record.options.defaultValue,
-          rules: record.rules
+          initialValue: record.options.defaultValue, // 默认值
+          rules: record.rules // 验证规则
         }
       ]"
-    />
+      :is="componentItem"
+    ></component>
   </a-form-item>
   <!-- 可隐藏label -->
   <a-form-item
-    v-else-if="
-      !(record.options.hidden === true) &&
-        (record.type === 'batch' || record.type === 'editor')
-    "
+    v-else-if="['batch', 'editor', 'selectInputList'].includes(record.type)"
     :label="!record.options.showLabel ? '' : record.label"
     :label-col="
       formConfig.layout === 'horizontal' && record.options.showLabel
-        ? formConfig.labelCol
+        ? formConfig.labelLayout === 'flex'
+          ? { style: `width:${formConfig.labelWidth}px` }
+          : formConfig.labelCol
         : {}
     "
     :wrapper-col="
       formConfig.layout === 'horizontal' && record.options.showLabel
-        ? formConfig.wrapperCol
+        ? formConfig.labelLayout === 'flex'
+          ? { style: 'width:auto;flex:1' }
+          : formConfig.wrapperCol
+        : {}
+    "
+    :style="
+      formConfig.layout === 'horizontal' &&
+      formConfig.labelLayout === 'flex' &&
+      record.options.showLabel
+        ? { display: 'flex' }
         : {}
     "
   >
-    <!-- 动态表格 -->
-    <KBatch
-      v-if="record.type === 'batch'"
-      ref="KBatch"
+    <component
+      :ref="['batch', 'selectInputList'].includes(record.type) && 'KBatch'"
       :style="`width:${record.options.width}`"
+      v-bind="componentOption"
       :record="record"
       :config="config"
-      :parentDisabled="disabled"
+      :parentDisabled="disabled || record.options.disabled"
+      :disabled="disabled || record.options.disabled"
       :dynamicData="dynamicData"
       @change="handleChange($event, record.model)"
       v-decorator="[
-        record.model,
+        record.model, // input 的 name
         {
-          initialValue: record.options.defaultValue,
-          rules: record.rules
+          initialValue: record.options.defaultValue, // 默认值
+          rules: record.rules // 验证规则
         }
       ]"
-    />
-    <!-- 富文本编辑器 -->
-    <KEditor
-      v-else
-      ref="KEditor"
-      :style="`width:${record.options.width}`"
-      :record="record"
-      :parentDisabled="disabled"
-      :dynamicData="dynamicData"
-      @change="handleChange($event, record.model)"
-      v-decorator="[
-        record.model,
-        {
-          initialValue: record.options.defaultValue,
-          rules: record.rules
-        }
-      ]"
-    />
+      :is="componentItem"
+    ></component>
   </a-form-item>
   <!-- button按钮 -->
-  <a-form-item
-    v-else-if="!(record.options.hidden === true) && record.type === 'button'"
-  >
+  <a-form-item v-else-if="record.type === 'button'">
     <a-button
       :disabled="disabled || record.options.disabled"
       @click="
@@ -467,9 +315,7 @@
     ></a-button>
   </a-form-item>
   <!-- alert提示 -->
-  <a-form-item
-    v-else-if="!(record.options.hidden === true) && record.type === 'alert'"
-  >
+  <a-form-item v-else-if="record.type === 'alert'">
     <a-alert
       :message="record.label"
       :description="record.options.description"
@@ -479,40 +325,24 @@
       :banner="record.options.banner"
     />
   </a-form-item>
-  <!-- 隐藏的组件 -->
 
-  <a-form-item
-    style="display:none"
-    v-else-if="
-      record.options.hidden === true &&
-        record.type === 'input' &&
-        record.options.type === 'hidden'
-    "
-  >
-    <a-input
-      v-decorator="[
-        record.model, // input 的 name
-        {
-          initialValue: record.options.defaultValue // 默认值
-        }
-      ]"
-      :type="record.options.type"
-    />
-  </a-form-item>
   <!-- 文本 -->
-  <a-form-item
-    v-else-if="!(record.options.hidden === true) && record.type === 'text'"
-  >
+  <a-form-item v-else-if="record.type === 'text'">
     <div :style="{ textAlign: record.options.textAlign }">
       <label
         :class="{ 'ant-form-item-required': record.options.showRequiredMark }"
+        :style="{
+          fontFamily: record.options.fontFamily,
+          fontSize: record.options.fontSize,
+          color: record.options.color
+        }"
         v-text="record.label"
       ></label>
     </div>
   </a-form-item>
   <!-- html -->
   <div
-    v-else-if="!(record.options.hidden === true) && record.type === 'html'"
+    v-else-if="record.type === 'html'"
     v-html="record.options.defaultValue"
   ></div>
 
@@ -550,13 +380,9 @@
  */
 // import moment from "moment";
 import customComponent from "./customComponent";
+import ComponentArray from "../core/components_use";
+const _ = require("lodash/object");
 
-import KBatch from "../KBatch";
-import KEditor from "../KEditor";
-import UploadFile from "../UploadFile";
-import UploadImg from "../UploadImg";
-import KDatePicker from "../KDatePicker";
-import KTimePicker from "../KTimePicker";
 export default {
   name: "KFormItem",
   props: {
@@ -584,12 +410,6 @@ export default {
     }
   },
   components: {
-    KBatch,
-    KEditor,
-    UploadImg,
-    UploadFile,
-    KDatePicker,
-    KTimePicker,
     customComponent
   },
   computed: {
@@ -599,6 +419,18 @@ export default {
       } else {
         return [];
       }
+    },
+    /**
+     * @description: 输出对应组件
+     * @param {*}
+     * @return {*} component
+     */
+
+    componentItem() {
+      return ComponentArray[this.record.type];
+    },
+    componentOption() {
+      return _.omit(this.record.options, ["defaultValue", "disabled"]);
     }
   },
   methods: {
@@ -607,8 +439,12 @@ export default {
       if (!this.$refs.KBatch) return true;
       return this.$refs.KBatch.validationSubform();
     },
-    handleChange(value, key) {
-      // change事件
+    handleChange(e, key) {
+      let value = e;
+      if (e && e.target) {
+        value = e.target.value;
+      }
+      // 传递change事件
       this.$emit("change", value, key);
     }
   }
